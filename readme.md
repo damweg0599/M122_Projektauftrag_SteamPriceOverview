@@ -15,19 +15,14 @@ Bis am **04.11.2026** liest das Skript einmal täglich automatisch alle handelba
 **Dazu gehört:**
 
 - Config-Datei `config.json` mit SteamID64, Währung, Pause zwischen den Abfragen und Ausgabepfaden
-- Auslesen des Inventars über die Steam-Inventar-API (nur handelbare Skins, Duplikate werden gezählt)
+- Auslesen des Inventars über die Steam-Inventar-API (nur handelbare Skins gezählt)
 - Abfrage der aktuellen Preise über die Steam-Market-API
 - Speichern der Preise in `preisverlauf.csv`
-- Vergleich mit dem letzten Lauf: Veränderung in CHF und Prozent (▲ / ▼)
+- Vergleich mit dem letzten Lauf: Veränderung in CHF und Prozent
 - Übersicht in der Konsole und als HTML-Bericht mit Gesamtwert
 - Log und Exit-Codes bei Fehlern (z. B. Inventar privat, kein Netz, zu viele Anfragen)
 - Automatischer Start über die Windows-Aufgabenplanung (1× täglich)
-- Code, Dokumentation und Testprotokoll im GitHub-Repository
-
-**Optional:**
-
-- Preisverlauf als Diagramm im HTML-Bericht
-- Push-Nachricht über ntfy.sh bei starken Preisänderungen
+- Skript wiederholt sich alle 30 min
 
 ## Zeit
 
@@ -40,7 +35,6 @@ Abgabe: **04.11.2026**
 |---|---|---|
 | Steam-Inventar-API | CS2-Items des Kontos auslesen | `https://steamcommunity.com/inventory/<SteamID64>/730/2` |
 | Steam-Market-API | Aktueller Tiefst- und Medianpreis in CHF | `https://steamcommunity.com/market/priceoverview/?appid=730&currency=4&market_hash_name=<Name>` |
-| ntfy.sh *(optional)* | Push-Nachricht aufs Handy | `https://ntfy.sh/<Topic>` |
 
 Voraussetzung: Das Steam-Inventar ist auf «öffentlich» gestellt.
 
@@ -53,4 +47,4 @@ Voraussetzung: Das Steam-Inventar ist auf «öffentlich» gestellt.
 5. Es speichert die Preise mit Datum in `preisverlauf.csv`.
 6. Es vergleicht die Preise mit dem letzten Lauf und berechnet Veränderung und Gesamtwert.
 7. Es gibt die Übersicht in der Konsole und als HTML-Bericht aus.
-8. Erfolg oder Fehler werden ins Log geschrieben, das Skript endet mit dem passenden Exit-Code.
+8. Erfolg oder Fehler werden ins Log geschrieben.
