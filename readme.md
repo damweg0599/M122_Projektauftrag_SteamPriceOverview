@@ -22,10 +22,8 @@ Bis am **04.11.2026** liest das Skript einmal täglich automatisch alle handelba
 - Übersicht in der Konsole und als HTML-Bericht mit Gesamtwert
 - Log und Exit-Codes bei Fehlern (z. B. Inventar privat, kein Netz, zu viele Anfragen)
 - Automatischer Start über die Windows-Aufgabenplanung (1× täglich)
-- Skript wiederholt sich alle 30 min
 
 ## Zeit
-
 
 Abgabe: **04.11.2026**
 
