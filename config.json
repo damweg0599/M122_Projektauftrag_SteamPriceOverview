@@ -1,0 +1,23 @@
+{
+    "steam": {
+        "steamId64": "76561198082397177",
+        "appId": 730,
+        "Waehrung": 4,
+        "nurHandelbar": true
+
+    },
+    "abfrage": {
+        "pauseSekunden": 5,
+        "maxVersuche": 3
+    },
+    "pfade": {
+        "preisverlauf": "daten/preisverlauf.csv",
+        "bericht": "bericht/bericht.html",
+        "logs": "logs"
+    },
+    "benachrichtigung": {
+        "aktiv": false,
+        "ntfyTopic": "dustin-cs-x7k2",
+        "schwelleProzent": 10
+    }
+}
