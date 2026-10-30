@@ -210,7 +210,7 @@ $ergebnisse = @()
 $fehlerInFolge = 0
 $i = 0
 
-Write-Log ("Frage Preise fuer {0} Skins ab (ca. {1} Minuten) ..." -f $total, [math]::Ceiling($total * $pause / 60))
+Write-Log ("Checking prices for {0} Skins at (ca. {1} Minute) ..." -f $total, [math]::Ceiling($total * $pause / 60))
 
 foreach ($s in $skins) {
     $i++
@@ -233,11 +233,11 @@ foreach ($s in $skins) {
             $fehlerInfolge = 0
         }
         'KEIN_PREIS' {
-            Write-Log "Steam liefert keinen Preis fuer '$($s.Skin)'" 'WARN'
+            Write-Log "Steam does not deliver price for '$($s.Skin)'" 'WARN'
             $fehlerInFolge = 0
         }
         'FEHLER' {
-            Write-Log "Preisabfrage fuer '$($s.Skin)' fehlgeschlagen" 'WARN'
+            Write-Log "Price checking '$($s.Skin)' failed" 'WARN'
             $fehlerInFolge++
         }
     }
@@ -257,7 +257,7 @@ foreach ($s in $skins) {
     if ($i -lt $total) { Start-Sleep -Seconds $pause }
 }
 
-Write-Progress -Activity 'Preise abfragen' -Completed
+Write-Progress -Activity 'Price checking complete' -Completed
 
 $mitPreis = @($ergebnisse | Where-Object { $null -ne $_.Preis })
 if ($mitPreis.Count -eq 0) {
