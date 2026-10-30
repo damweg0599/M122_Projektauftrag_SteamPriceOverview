@@ -8,6 +8,11 @@
    3 - Fehler bei der Preisabfrage
    #>
 
+   param(
+    [string]$ConfigPfad = (Join-Path $PSScriptRoot 'config.json'),
+    [int]$TestAnzahl = 0
+   )
+
    $ErrorActionPreference = "Stop"
 
 
@@ -131,5 +136,159 @@ if (-not $skins) {
 Write-Log ("Inventar geladen: {0} Items, {1} verschiedene handelbare Skins" -f `
     $inv.total_inventory_count, @($skins).Count)
 
-# Zwischenausgabe zum Testen
-$skins | Format-Table -AutoSize
+# Schritt 5: Hilfsfunktionen für Preisabfrage
+
+$pause = [int]$config.abfrage.pauseSekunden
+$maxVersuche = [int]$config.abfrage.maxVersuche
+if ($maxVersuche -lt 1) { $maxVersuche = 1}
+
+function ConvertTo-Preis {
+    param([string]$Text)
+
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
+
+    $zahl = $Text -replace '[^\d.,]', ''
+    if ($zahl -match ',' -and $zahl -match '\.') {
+        $zahl = $zahl -replace ',', ''
+    }
+    else {
+        $zahl = $zahl -replace ',', '.'
+    }
+
+    [decimal]$wert = 0
+    if ([decimal]::TryParse($zahl, [Globalization.NumberStyles]::Number, [cultureinfo]::InvarationCulture, [ref]$wert)) {
+        return $wert
+    }
+    return $null
+}
+
+function Get-Preis {
+    param([string]$Name)
+
+    $url = "https://steamcommunity.com/market/priceoverview/?appid={0}&currency={1}&market_hash_name={2}" -f `
+        $config.steam.appId, $config.steam.waehrung, [uri]::EscapeDataString($Name)
+
+    for ($versuch = 1; $versuch -le $maxVersuche; $versuch++) {
+        try {
+            $antwort = Invoke-RestMethod -Uri $url -TimeoutSec 30
+            if ($antwort.success) {
+                return @{ Status = 'OK'; Antwort = $antwort }
+            }
+            return @{ Status = 'KEIN_PREIS'; Antwort = $null}
+        }
+        catch {
+            $status = $null
+            if ($_.Exception.Response) {
+                $status = [int]$_.Exception.Response.StatusCode
+            }
+            
+            if ($status -eq 429) {
+                Write-Log ("HTTP 429 bei '{0}', warte 60 Sekunden (Versuch {1} von {2})" -f $name, $versuch, $maxVersuche) 'WARN'
+                Start-Sleep -Seconds 60
+            }
+            else {
+                Write-Log ("Fehler bei '{0}' (HTTP {1}, Versuch {2} von {3})" -f $name, $status, $versuch, $maxVersuche) 'WARN'
+                Start-Sleep -Seconds $pause
+            }
+        }
+    }
+    return @{ Status = 'FEHLER'; Antwort = $null }
+}
+
+# Schritt 6: Preise für alle Skins abfragen
+
+$skins = @($skins)
+
+if ($TestAnzahl -gt 0) {
+    $skins = @($skins | Select-Object -First $TestAnzahl)
+    Write-Log "Testmodus: Es werden nur $TestAnzahl Skins abgefragt." 'WARN'
+}
+
+$total = $skins.Count
+$zeitpunkt = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+$ergebnisse = @()
+$fehlerInFolge = 0
+$i = 0
+
+Write-Log ("Frage Preise fuer {0} Skins ab (ca. {1} Minuten) ..." -f $total, [math]::Ceiling($total * $pause / 60))
+
+foreach ($s in $skins) {
+    $i++
+    Write-Progress -Activity 'Checking price' `
+        -Status ("{0} von {1}: {2}" -f $i, $total, $s.Skin) `
+        -PercentComplete (($i / $total) * 100)
+
+    $r = Get-Preis -Name $s.Skin
+    $preis = $null
+
+    switch ($r.Status) {
+        'OK' {
+            $preis = ConvertTo-Preis $r.Antwort.lowest_price
+            if ($null -eq $preis) {
+                $preis = ConvertTo-Preis $r.Antwort.median_price
+            }
+            if ($null -eq $preis) {
+                Write-Log "No price found for '$($s.Skin)'" 'WARN'
+            }
+            $fehlerInfolge = 0
+        }
+        'KEIN_PREIS' {
+            Write-Log "Steam liefert keinen Preis fuer '$($s.Skin)'" 'WARN'
+            $fehlerInFolge = 0
+        }
+        'FEHLER' {
+            Write-Log "Preisabfrage fuer '$($s.Skin)' fehlgeschlagen" 'WARN'
+            $fehlerInFolge++
+        }
+    }
+
+    if ($fehlerInFolge -ge 5) {
+        Stop-Skript 3 '5 Preisabfragen in Folge fehlgeschlagen, Abbruch.'
+    }
+
+    $ergebnisse += [PSCustomObject]@{
+        Zeitpunkt = $zeitpunkt
+        Skin = $s.Skin
+        Anzahl = $s.Anzahl
+        Preis = $preis
+        Wert = if ($null -ne $preis) { $preis * $s.Anzahl } else { $null }
+    }
+
+    if ($i -lt $total) { Start-Sleep -Seconds $pause }
+}
+
+Write-Progress -Activity 'Preise abfragen' -Completed
+
+$mitPreis = @($ergebnisse | Where-Object { $null -ne $_.Preis })
+if ($mitPreis.Count -eq 0) {
+    Stop-Skript 3 'Fuer keinen einzigen Skin konnte ein Preis ermittelt werden.'
+}
+
+# Schritt 7: Preisverlauf speichern
+
+$csvPfad = Join-Path $PSScriptRoot $config.pfade.preisverlauf
+$csvOrdner = Split-Path $csvPfad -Parent
+if (-not (Test-Path $csvOrdner)) {
+    New-Item -ItemType Directory -Path $csvOrdner | Out-Null
+}
+
+$ergebnisse |
+ Select-Object Zeitpunkt, Skin, Anzahl,
+ @{ n = 'Preis'; e = { if ($null -ne $_.Preis) { $_.Preis.ToString('0.00', [cultureInfo]::InvariantCulture) } else { '' } } } |
+ Export-Csv -Path $csvPfad -Append -NoTypeInformation -Encoding UTF8 -Delimiter ';'
+
+ Write-Log "Preise gespeichert in $csvPfad"
+
+ # Schritt 8: Übersicht ausgeben
+
+ $gesamt = ($mitPreis | Measure-Object -Property Wert -Sum).Sum
+
+ $ergebnisse | Sort-Object Wert -Descending | Format-Table -AutoSize `
+  Skin,
+  Anzahl,
+  @{ n = 'Preis CHF'; e = { '{0:N2}' -f $_.Preis}; a = 'right'},
+  @{ n = 'Wert CHF'; e = { '{0:N2}' -f $_.Wert }; a = 'right'}
+
+  Write-Log ("Gesamtwert Inventar: CHF {0:N2} ({1} von {2} Skins mit Preise)" -f $gesamt, $mitPreis.Count, $total)
+  Write-Log 'Skript erfolgreich beendet'
+  exit 0
