@@ -1,4 +1,4 @@
-<# CS2-Skin-Preisübersicht
+﻿<# CS2-Skin-Preisübersicht
    Liest das Steam Inventar aus und ermittelt die aktuellen Preise
    
    Exit Codes:
@@ -264,6 +264,57 @@ if ($mitPreis.Count -eq 0) {
     Stop-Skript 3 'Fuer keinen einzigen Skin konnte ein Preis ermittelt werden.'
 }
 
+# Schritt 6b: Vergleich mit dem letzten bekannen Preis
+
+$csvPfad = Join-Path $PSScriptRoot $config.pfade.preisverlauf
+$letztePreise = @{}
+
+if (Test-Path $csvPfad) {
+    $verlauf = @(Import-Csv -Path $csvPfad -Delimiter ';' -Encoding UTF8)
+    $mitWert = $verlauf | Where-Object { $_.Preis -ne '' }
+
+    foreach ($gruppe in ($mitWert | Group-Object Skin)) {
+        $letzter = $gruppe.Group | Sort-Object Zeitpunkt | Select-Object -Last 1
+        $letztePreise[$gruppe.Name] = [decimal]::Parse($letzter.Preis, [cultureinfo]::InvariantCulture)
+    }
+    Write-Log ("Preisverlauf geladen: {0} Eingräge, {1} Skins mit früherem Preis" -f $verlauf.Count, $letztePreise.Count)
+}
+else {
+    Write-Log 'Noch kein Preisverlauf vorhandnen (erster Lauf).'
+}
+
+foreach ($e in $ergebnisse) {
+    $alterPreis = $null
+    $differenz = $null
+    $prozent = $null
+
+    if ($letztePreise.ContainsKey($e.Skin) -and $null -ne $e.Preis) {
+        $alterPreis = $letztePreise[$e.Skin]
+        $differenz = $e.Preis - $alterPreis
+        if ($alterPreis -ne 0) {
+            $prozent = ($differenz / $alterPreis) * 100
+        }
+    }
+
+    $richtung = if ($null -eq $differenz) { 'neu' }
+    elseif ($differenz -gt 0) { 'hoch' }
+    elseif ($differenz -lt 0) { 'runter' }
+    else { 'gleich' }
+
+    $e | Add-Member -NotePropertyName 'AlterPreis' -NotePropertyValue $alterPreis
+    $e | Add-Member -NotePropertyName 'Differenz' -NotePropertyValue $differenz
+    $e | Add-Member -NotePropertyName 'Prozent' -NotePropertyValue $prozent
+    $e | Add-Member -NotePropertyName 'Richtung' -NotePropertyValue $richtung
+}
+
+$pfeile = @{
+    hoch = [string][char]0x25b2
+    runter = [string][char]0x25bc
+    gleich = '='
+    neu = '-'
+}
+
+
 # Schritt 7: Preisverlauf speichern
 
 $csvPfad = Join-Path $PSScriptRoot $config.pfade.preisverlauf
@@ -281,14 +332,123 @@ $ergebnisse |
 
  # Schritt 8: Übersicht ausgeben
 
- $gesamt = ($mitPreis | Measure-Object -Property Wert -Sum).Sum
+$gesamt = ($mitPreis | Measure-Object -Property Wert -Sum).Sum
 
- $ergebnisse | Sort-Object Wert -Descending | Format-Table -AutoSize `
-  Skin,
-  Anzahl,
-  @{ n = 'Preis CHF'; e = { '{0:N2}' -f $_.Preis}; a = 'right'},
-  @{ n = 'Wert CHF'; e = { '{0:N2}' -f $_.Wert }; a = 'right'}
+$mitVergleich = @($ergebnisse | Where-Object { $null -ne $_.Differenz })
+$wertAenderung = $null
+if ($mitVergleich.Count -gt 0) {
+    $wertAenderung = ($mitVergleich | Foreach-Object { $_.Differenz * $_.Anzahl } | Measure-Object -Sum).Sum
+}
 
-  Write-Log ("Gesamtwert Inventar: CHF {0:N2} ({1} von {2} Skins mit Preise)" -f $gesamt, $mitPreis.Count, $total)
-  Write-Log 'Skript erfolgreich beendet'
-  exit 0
+$ergebnisse | Sort-Object Wert -Descending | Format-Table `
+Skins,
+Anzahl,
+@{ n = 'Preis CHF'; e = { '{0:N2}' -f $_.Preis }; a = 'right' },
+@{ n = 'Trend'; e = { $pfeile[$_.Richtung] }; a = 'center'  },
+@{ n = 'Diff CHF'; e = { if ($null -ne $_.Differenz) { '{0:+0.00;-0.00;0.00}' -f $_.Differenz } }; a = 'right' },
+@{ n = '%'; e = { if ($null -ne $_.Prozent) { '{0:+0.00;-0.00;0.00}' -f $_.Prozent } }; a = 'right' },
+@{ n = 'Wert CHF'; e = { '{0:N2}' -f $_.Wert }; a = 'right' }
+
+Write-Log ("Gesamtwert Inventar: CHF {0:N2} ({1} von {2} Skins mit Preis)" -f $gesamt, $mitPreis.Count, $total)
+if ($null -ne $wertAenderung) {
+    Write-Log ("Veränderung seit letztem Lauf: CHF {0:+0.00;-0.00;0.00}" -f $wertAenderung)
+}
+
+# Schritt 9: HTML-Bericht
+
+$berichtOrdner  = Join-Path $PSScriptRoot $config.pfade.berichte
+$archivOrdner = Join-Path $PSScriptRoot $config.pfade.archiv
+foreach ($ordner in $berichtOrdner, $archivOrdner) {
+    if (-not (Test-Path $ordner)) {
+        New-Item -ItemType Directory -Path $ordner | Out-Null
+    }
+}
+
+# Alte Bericht ins Archiv verschieben
+
+$alteBerichte = @(Get-ChildItem -Path $berichtOrdner -Filter 'bericht*.html' -File)
+foreach ($datei in $alteBerichte) {
+    try {
+        move-item -Path $datei.FullName -Destination $archivOrdner -Force
+    }
+    catch {
+        Write-Log "Bericht '$($datei.Name)' konnte nicht archiviert werden: $($_.Exception.Message)" 'WARN'
+    }
+}
+if ($alteBerichte.Count -gt 0) {
+    Write-Log ("{0} alte Berichte ins Archiv verschoben." -f $alteBerichte.Count)
+}
+
+# Neuer Dateiname mit Datum und Uhrzeit des Laufs
+
+$zeitstempel = $zeitpunkt -replace ' ', '_' -replace ':', '-'
+$berichtPfad = Join-Path $berichtOrdner ("bericht_{0}.html" -f $zeitstempel)
+
+$zeilen = foreach ($e in ($ergebnisse | Sort-Object Wert -Descending)) {
+    $diffText = ''
+    $prozText = ''
+    if ($null -ne $e.Differenz) { $diffText = '{0:+0.00;-0.00;0.00}' -f $e.Differenz }
+    if ($null -ne $e.Prozent)   { $prozText = '{0:+0.0;-0.0;0.0} %'  -f $e.Prozent }
+
+    "<tr><td>{0}</td><td class='zahl'>{1}</td><td class='zahl'>{2:N2}</td><td class='{3}'>{4}</td><td class='zahl {3}'>{5}</td><td class='zahl {3}'>{6}</td><td class='zahl'>{7:N2}</td></tr>" -f `
+        [System.Net.WebUtility]::HtmlEncode($e.Skin), $e.Anzahl, $e.Preis,
+        $e.Richtung, $pfeile[$e.Richtung], $diffText, $prozText, $e.Wert
+}
+
+$gesamtText = '{0:N2}' -f $gesamt
+if ($null -ne $wertAenderung) {
+    $aenderungText   = 'CHF {0:+0.00;-0.00;0.00}' -f $wertAenderung
+    $aenderungKlasse = if ($wertAenderung -gt 0) { 'hoch' } elseif ($wertAenderung -lt 0) { 'runter' } else { 'gleich' }
+}
+else {
+    $aenderungText   = 'erster Lauf'
+    $aenderungKlasse = 'neu'
+}
+
+$html = @"
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>CS2-Skin-Preis&uuml;bersicht</title>
+<style>
+  body   { font-family: "Segoe UI", Arial, sans-serif; margin: 2rem; background: #f6f7f9; color: #222; }
+  h1     { margin-bottom: .2rem; }
+  .stand { color: #666; margin-top: 0; }
+  .karten { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1.2rem 0 1.5rem; }
+  .karte { background: #fff; border: 1px solid #e3e5e8; border-radius: 8px; padding: .9rem 1.2rem; min-width: 180px; }
+  .karte b { display: block; font-size: 1.4rem; margin-top: .2rem; }
+  table  { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { padding: .45rem .7rem; border-bottom: 1px solid #e3e5e8; text-align: left; }
+  th     { background: #2b3440; color: #fff; }
+  .zahl  { text-align: right; font-variant-numeric: tabular-nums; }
+  .hoch  { color: #1a7f37; }
+  .runter { color: #c62828; }
+  .gleich, .neu { color: #888; }
+</style>
+</head>
+<body>
+<h1>CS2-Skin-Preis&uuml;bersicht</h1>
+<p class="stand">Stand: $zeitpunkt</p>
+
+<div class="karten">
+  <div class="karte">Gesamtwert<b>CHF $gesamtText</b></div>
+  <div class="karte">Ver&auml;nderung seit letztem Lauf<b class="$aenderungKlasse">$aenderungText</b></div>
+  <div class="karte">Skins mit Preis<b>$($mitPreis.Count) / $total</b></div>
+</div>
+
+<table>
+  <tr><th>Skin</th><th>Anz.</th><th>Preis CHF</th><th>Trend</th><th>Diff CHF</th><th>%</th><th>Wert CHF</th></tr>
+  $($zeilen -join "`n  ")
+</table>
+</body>
+</html>
+"@
+
+try {
+    $html | Set-Content -Path $berichtPfad -Encoding UTF8
+}
+catch {
+    Stop-Skript 4 "HTML-Bericht konnte nicht gespeichert werden: $($_.Exception.Message)"
+}
+Write-Log "HTML-Bericht erstellt: $berichtPfad"

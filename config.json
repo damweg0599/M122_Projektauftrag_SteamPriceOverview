@@ -1,6 +1,6 @@
 {
     "steam": {
-        "steamId64": "76561198082397177",
+        "steamId64": "76561198001574922",
         "appId": 730,
         "Waehrung": 4,
         "nurHandelbar": true
@@ -12,8 +12,9 @@
     },
     "pfade": {
         "preisverlauf": "daten/preisverlauf.csv",
-        "bericht": "bericht/bericht.html",
-        "logs": "logs"
+        "berichte": "berichte",
+        "logs": "logs",
+        "archiv": "berichte/archiv"
     },
     "benachrichtigung": {
         "aktiv": false,

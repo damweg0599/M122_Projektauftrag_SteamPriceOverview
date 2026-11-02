@@ -290,3 +290,12 @@
 2026-10-30 14:58:56 [INFO] Preise gespeichert in C:\Users\dustin.amweg\M122_Projektauftrag\daten\preisverlauf.csv
 2026-10-30 14:58:56 [INFO] Gesamtwert Inventar: CHF 26.06 (15 von 15 Skins mit Preise)
 2026-10-30 14:58:56 [INFO] Skript erfolgreich beendet
+2026-10-30 16:07:17 [INFO] Skript gestartet
+2026-10-30 16:07:17 [INFO] Config geladen (SteamID64: 76561198082397177)
+2026-10-30 16:07:17 [INFO] Lade Inventar von Steam...
+2026-10-30 16:07:17 [INFO] Inventar geladen: 226 Items, 138 verschiedene handelbare Skins
+2026-10-30 16:07:17 [WARN] Testmodus: Es werden nur 5 Skins abgefragt.
+2026-10-30 16:07:17 [INFO] Checking prices for 5 Skins at (ca. 1 Minute) ...
+2026-10-30 16:07:38 [INFO] Preise gespeichert in C:\Users\dustin.amweg\M122_Projektauftrag\daten\preisverlauf.csv
+2026-10-30 16:07:39 [INFO] Gesamtwert Inventar: CHF 19.85 (5 von 5 Skins mit Preise)
+2026-10-30 16:07:39 [INFO] Skript erfolgreich beendet
