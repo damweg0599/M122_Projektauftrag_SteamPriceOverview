@@ -1,6 +1,20 @@
 ﻿<# CS2-Skin-Preisübersicht
    Liest das Steam Inventar aus und ermittelt die aktuellen Preise
    
+Ablauf:
+    Schritt 1   Logging vorbereiten
+    Schritt 2   Config lesen und prüfen
+    Schritt 3   Inventar über die Steam-Inventar-API laden
+    Schritt 4   Handelbare Skins zusammenfassen
+    Schritt 5   Hilfsfunktionen für die Preisabfrage
+    Schritt 6   Preise aller Skins abfragen
+    Schritt 6b  Vergleich mit dem letzten bekannten Preis
+    Schritt 7   Preisverlauf speichern
+    Schritt 8   Übersicht in der Konsole ausgeben
+    Schritt 9   HTML-Bericht erstellen und alte Berichte archivieren
+
+    -ConfigPfad   Pfad zur Konfigurationsdatei (Standard: config.json im Skriptordner)
+
    Exit Codes:
    0 - OK
    1 - Fehler in der Conifg

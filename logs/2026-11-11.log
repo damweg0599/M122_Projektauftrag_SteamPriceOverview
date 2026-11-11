@@ -1,0 +1,23 @@
+﻿2026-11-11 13:38:07 [INFO] Script started
+2026-11-11 13:38:07 [INFO] Config loaded (SteamID64: 76561198082397177)
+2026-11-11 13:38:07 [INFO] Loading Steam Inventory...
+2026-11-11 13:38:07 [FEHLER] Error loading inventory: (HTTP )
+2026-11-11 13:38:07 [FEHLER] Script completed with Exit-Code 2
+2026-11-11 13:54:55 [INFO] Script started
+2026-11-11 13:54:55 [FEHLER] Invalid SteamID64 in Config.json: 7656119808239717
+2026-11-11 13:54:55 [FEHLER] Script completed with Exit-Code 1
+2026-11-11 14:00:06 [INFO] Script started
+2026-11-11 14:00:06 [FEHLER] Invalid SteamID64 in Config.json: 7656119808239717
+2026-11-11 14:00:06 [FEHLER] Script completed with Exit-Code 1
+2026-11-11 14:00:45 [INFO] Script started
+2026-11-11 14:00:45 [INFO] Config loaded (SteamID64: 76561198082397177)
+2026-11-11 14:00:45 [INFO] Loading Steam Inventory...
+2026-11-11 14:00:47 [INFO] Inventory loaded: 226 Items, 138 different tradeable skins
+2026-11-11 14:00:47 [INFO] Checking prices for 138 Skins (ca. 12 Minute) ...
+2026-11-11 14:05:01 [INFO] Script started
+2026-11-11 14:05:01 [INFO] Config loaded (SteamID64: 76561198082397177)
+2026-11-11 14:05:01 [INFO] Loading Steam Inventory...
+2026-11-11 14:05:01 [INFO] Inventory loaded: 226 Items, 138 different tradeable skins
+2026-11-11 14:05:01 [INFO] Checking prices for 138 Skins (ca. 12 Minute) ...
+2026-11-11 14:07:38 [WARN] No price found for 'Paris 2023 Gold Coin'
+2026-11-11 14:07:53 [WARN] No price found for 'Rio 2022 Silver Coin'
