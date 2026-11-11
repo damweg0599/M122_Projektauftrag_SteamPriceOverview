@@ -1,0 +1,48 @@
+﻿2026-11-11 13:38:07 [INFO] Script started
+2026-11-11 13:38:07 [INFO] Config loaded (SteamID64: 76561198082397177)
+2026-11-11 13:38:07 [INFO] Loading Steam Inventory...
+2026-11-11 13:38:07 [FEHLER] Error loading inventory: (HTTP )
+2026-11-11 13:38:07 [FEHLER] Script completed with Exit-Code 2
+2026-11-11 13:54:55 [INFO] Script started
+2026-11-11 13:54:55 [FEHLER] Invalid SteamID64 in Config.json: 7656119808239717
+2026-11-11 13:54:55 [FEHLER] Script completed with Exit-Code 1
+2026-11-11 14:00:06 [INFO] Script started
+2026-11-11 14:00:06 [FEHLER] Invalid SteamID64 in Config.json: 7656119808239717
+2026-11-11 14:00:06 [FEHLER] Script completed with Exit-Code 1
+2026-11-11 14:00:45 [INFO] Script started
+2026-11-11 14:00:45 [INFO] Config loaded (SteamID64: 76561198082397177)
+2026-11-11 14:00:45 [INFO] Loading Steam Inventory...
+2026-11-11 14:00:47 [INFO] Inventory loaded: 226 Items, 138 different tradeable skins
+2026-11-11 14:00:47 [INFO] Checking prices for 138 Skins (ca. 12 Minute) ...
+2026-11-11 14:05:01 [INFO] Script started
+2026-11-11 14:05:01 [INFO] Config loaded (SteamID64: 76561198082397177)
+2026-11-11 14:05:01 [INFO] Loading Steam Inventory...
+2026-11-11 14:05:01 [INFO] Inventory loaded: 226 Items, 138 different tradeable skins
+2026-11-11 14:05:01 [INFO] Checking prices for 138 Skins (ca. 12 Minute) ...
+2026-11-11 14:07:38 [WARN] No price found for 'Paris 2023 Gold Coin'
+2026-11-11 14:07:53 [WARN] No price found for 'Rio 2022 Silver Coin'
+2026-11-11 14:07:58 [WARN] No price found for '2022 Service Medal'
+2026-11-11 14:08:40 [WARN] No price found for 'Loyalty Badge'
+2026-11-11 14:08:45 [WARN] No price found for 'Gold London 2018 Pick'Em Trophy'
+2026-11-11 14:08:51 [WARN] No price found for 'Berlin 2019 Silver Coin'
+2026-11-11 14:09:16 [WARN] No price found for '2017 Service Medal'
+2026-11-11 14:09:27 [WARN] No price found for 'Operation Bloodhound Challenge Coin'
+2026-11-11 14:09:32 [WARN] No price found for 'Operation Hydra Challenge Coin'
+2026-11-11 14:09:37 [WARN] No price found for '5 Year Veteran Coin'
+2026-11-11 14:09:43 [WARN] No price found for 'Silver Boston 2018 Pick'Em Trophy'
+2026-11-11 14:09:48 [WARN] No price found for 'Bronze Krakow 2017 Pick'Em Trophy'
+2026-11-11 14:10:45 [WARN] No price found for 'Operation Broken Fang Challenge Coin'
+2026-11-11 14:11:06 [WARN] No price found for 'Music Kit | Halo, The Master Chief Collection'
+2026-11-11 14:14:14 [WARN] No price found for 'Graffiti | Toasted (Monster Purple)'
+2026-11-11 14:14:19 [WARN] No price found for 'Graffiti | Eco (Dust Brown)'
+2026-11-11 14:14:45 [WARN] No price found for 'Global Offensive Badge'
+2026-11-11 14:14:50 [WARN] No price found for 'Music Kit | Valve, CS:GO'
+2026-11-11 14:15:06 [WARN] No price found for '10 Year Veteran Coin'
+2026-11-11 14:16:19 [WARN] No price found for 'Copenhagen 2024 Silver Coin'
+2026-11-11 14:16:55 [INFO] Preisverlauf geladen: 443 Eingräge, 166 Skins mit früherem Preis
+2026-11-11 14:16:56 [INFO] Preise gespeichert in C:\Users\dustin.amweg\M122_Projektauftrag\daten\preisverlauf.csv
+2026-11-11 14:16:56 [INFO] Gesamtwert Inventar: CHF 155.86 (118 von 138 Skins mit Preis)
+2026-11-11 14:16:56 [INFO] Veränderung seit letztem Lauf: CHF +0.11
+2026-11-11 14:16:56 [INFO] old reports moved to archive.
+2026-11-11 14:16:56 [INFO] HTML-Bericht erstellt: C:\Users\dustin.amweg\M122_Projektauftrag\berichte\bericht_2026-11-11_14-05-01.html
+2026-11-11 14:16:56 [INFO] Skript successfully completed
