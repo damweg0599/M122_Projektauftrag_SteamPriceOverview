@@ -110,3 +110,62 @@
 2026-11-02 13:24:07 [INFO] Veränderung seit letztem Lauf: CHF 0.00
 2026-11-02 13:24:07 [INFO] 1 alte Berichte ins Archiv verschoben.
 2026-11-02 13:24:07 [INFO] HTML-Bericht erstellt: C:\Users\dustin.amweg\M122_Projektauftrag\berichte\bericht_2026-11-02_13-22-54.html
+2026-11-02 13:52:17 [INFO] Skript gestartet
+2026-11-02 13:52:17 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 13:52:17 [INFO] Loading Steam Inventory...
+2026-11-02 13:52:17 [INFO] Inventar geladen: 82 Items, 75 verschiedene handelbare Skins
+2026-11-02 13:52:17 [WARN] Testmodus: Es werden nur 5 Skins abgefragt.
+2026-11-02 13:52:17 [INFO] Checking prices for 5 Skins at (ca. 1 Minute) ...
+2026-11-02 13:52:38 [INFO] Preisverlauf geladen: 272 Eingräge, 166 Skins mit früherem Preis
+2026-11-02 13:52:38 [INFO] Preise gespeichert in C:\Users\dustin.amweg\M122_Projektauftrag\daten\preisverlauf.csv
+2026-11-02 13:52:38 [INFO] Gesamtwert Inventar: CHF 0.42 (5 von 5 Skins mit Preis)
+2026-11-02 13:52:38 [INFO] Veränderung seit letztem Lauf: CHF 0.00
+2026-11-02 13:52:38 [INFO] 1 alte Berichte ins Archiv verschoben.
+2026-11-02 13:52:38 [INFO] HTML-Bericht erstellt: C:\Users\dustin.amweg\M122_Projektauftrag\berichte\bericht_2026-11-02_13-52-17.html
+2026-11-02 14:07:03 [INFO] Skript gestartet
+2026-11-02 14:07:03 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 14:07:03 [INFO] Loading Steam Inventory...
+2026-11-02 14:07:03 [WARN] Keine handelbaren Skins im Inventar gefunden.
+2026-11-02 14:07:11 [INFO] Skript gestartet
+2026-11-02 14:07:11 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 14:07:11 [INFO] Loading Steam Inventory...
+2026-11-02 14:07:11 [WARN] Keine handelbaren Skins im Inventar gefunden.
+2026-11-02 14:08:47 [INFO] Skript gestartet
+2026-11-02 14:08:47 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 14:08:47 [INFO] Loading Steam Inventory...
+2026-11-02 14:09:06 [INFO] Skript gestartet
+2026-11-02 14:09:06 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 14:09:06 [INFO] Loading Steam Inventory...
+2026-11-02 14:12:13 [INFO] Skript gestartet
+2026-11-02 14:12:13 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 14:12:13 [INFO] Loading Steam Inventory...
+2026-11-02 14:15:00 [INFO] Skript gestartet
+2026-11-02 14:15:00 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 14:15:00 [INFO] Loading Steam Inventory...
+2026-11-02 14:15:00 [INFO] Inventar geladen: 82 Items, 75 verschiedene handelbare Skins
+2026-11-02 14:15:00 [WARN] Testmodus: Es werden nur 15 Skins abgefragt.
+2026-11-02 14:15:00 [INFO] Checking prices for 15 Skins at (ca. 2 Minute) ...
+2026-11-02 14:15:26 [WARN] No price found for '2020 Service Medal'
+2026-11-02 14:15:37 [WARN] No price found for 'Music Kit | Halo, The Master Chief Collection'
+2026-11-02 14:15:42 [WARN] No price found for '10 Year Veteran Coin'
+2026-11-02 14:16:13 [WARN] No price found for '2022 Service Medal'
+2026-11-02 14:16:13 [INFO] Preisverlauf geladen: 277 Eingräge, 166 Skins mit früherem Preis
+2026-11-02 14:16:13 [INFO] Preise gespeichert in C:\Users\dustin.amweg\M122_Projektauftrag\daten\preisverlauf.csv
+2026-11-02 14:16:13 [INFO] Gesamtwert Inventar: CHF 0.61 (11 von 15 Skins mit Preis)
+2026-11-02 14:16:13 [INFO] Veränderung seit letztem Lauf: CHF 0.00
+2026-11-02 14:16:13 [INFO] 1 alte Berichte ins Archiv verschoben.
+2026-11-02 14:16:13 [INFO] HTML-Bericht erstellt: C:\Users\dustin.amweg\M122_Projektauftrag\berichte\bericht_2026-11-02_14-15-00.html
+2026-11-02 14:16:13 [INFO] Skript erfolgreich beendet
+2026-11-02 14:28:29 [INFO] Skript gestartet
+2026-11-02 14:28:29 [INFO] Config geladen (SteamID64: 76561198001574922)
+2026-11-02 14:28:29 [INFO] Loading Steam Inventory...
+2026-11-02 14:28:29 [INFO] Inventar geladen: 82 Items, 75 verschiedene handelbare Skins
+2026-11-02 14:28:29 [WARN] Testmodus: Es werden nur 5 Skins abgefragt.
+2026-11-02 14:28:29 [INFO] Checking prices for 5 Skins at (ca. 1 Minute) ...
+2026-11-02 14:28:50 [INFO] Preisverlauf geladen: 292 Eingräge, 166 Skins mit früherem Preis
+2026-11-02 14:28:50 [INFO] Preise gespeichert in C:\Users\dustin.amweg\M122_Projektauftrag\daten\preisverlauf.csv
+2026-11-02 14:28:50 [INFO] Gesamtwert Inventar: CHF 0.42 (5 von 5 Skins mit Preis)
+2026-11-02 14:28:50 [INFO] Veränderung seit letztem Lauf: CHF 0.00
+2026-11-02 14:28:50 [INFO] alte Berichte ins Archiv verschoben.
+2026-11-02 14:28:50 [INFO] HTML-Bericht erstellt: C:\Users\dustin.amweg\M122_Projektauftrag\berichte\bericht_2026-11-02_14-28-29.html
+2026-11-02 14:28:50 [INFO] Skript erfolgreich beendet

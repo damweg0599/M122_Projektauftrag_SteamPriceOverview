@@ -1,9 +1,10 @@
 {
     "steam": {
-        "steamId64": "76561198001574922",
+        "steamId64": "76561198082397177",
         "appId": 730,
         "Waehrung": 4,
-        "nurHandelbar": true
+        "nurHandelbar": true,
+        "bildServer": "community.fastly.steamstatic.com"
 
     },
     "abfrage": {

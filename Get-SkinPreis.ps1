@@ -46,42 +46,42 @@ function Stop-Skript {
         [string]$Text
     )
     Write-Log $Text 'FEHLER'
-    Write-Log "Skript beendet mit Exit-Code $Code" 'FEHLER'
+    Write-Log "Script completed with Exit-Code $Code" 'FEHLER'
     exit $Code
 }
 
-Write-Log 'Skript gestartet'
+Write-Log 'Script started'
 
 # Schritt 2: Config lesen und prüfen
 
 $configPfad = Join-Path $PSScriptRoot 'config.json'
 
 if (-not (Test-Path $configPfad)) {
-    Stop-Skript 1 "Config-Datei nicht gefunden: $configPfad"
+    Stop-Skript 1 "Config-File not found: $configPfad"
 }
 
 try {
     $config = Get-Content $configPfad -Raw -Encoding UTF8 | ConvertFrom-Json 
 }
 catch {
-    Stop-Skript 1 "Config.json ist keine gültige JSON-Datei: $($_.Exception.Message)"
+    Stop-Skript 1 "Config.json is not a valid JSON file: $($_.Exception.Message)"
 }
 
 if ("$($config.steam.steamId64)" -notmatch '^7656\d{13}$') {
-    Stop-Skript 1 "Ungueltige SteamID64 in Config.json: $($config.steam.steamId64)"
+    Stop-Skript 1 "Invalid SteamID64 in Config.json: $($config.steam.steamId64)"
 }
 if ([int]$config.abfrage.pauseSekunden -lt 1) {
-    Stop-Skript 1 'pauseSekunden in Config.json muss mindestens 1 sein'
+    Stop-Skript 1 'pauseSekunden in Config.json must be at least 1'
 }
 
-Write-Log "Config geladen (SteamID64: $($config.steam.steamId64))"
+Write-Log "Config loaded (SteamID64: $($config.steam.steamId64))"
 
 #Schritt 3 Inventar laden
 
 $url = "https://steamcommunity.com/inventory/{0}/{1}/2?l=german&count=500" -f `
     $config.steam.steamId64, $config.steam.appId
 
-Write-Log 'Lade Inventar von Steam...'
+Write-Log 'Loading Steam Inventory...'
 
 try {
     $inv = Invoke-RestMethod -Uri $url -TimeoutSec 30
@@ -93,18 +93,18 @@ catch {
         $status = [int]$fehler.Exception.Response.StatusCode
 }
 Switch ($status) {
-    403 { Stop-Skript 2 'Inventar ist Privat (HTTP 403). In Steam auf "Öffentlich stellen.'}
-    404 { Stop-Skript 2 'Inventar nicht gefunden (HTTP 404). SteamID64 in config.json prüfen.'}
-    429 { Stop-Skript 2 'Zu viele Anfragen (HTTP 429). Später erneut versuchen.'}
-    default { Stop-Skript 2 "Fehler beim Laden des Inventars: (HTTP $status)" }
+    403 { Stop-Skript 2 'Inventory is private (HTTP 403). Set inventory to "Public" on Steam.'}
+    404 { Stop-Skript 2 'Inventory not found (HTTP 404). Check SteamID64 in config.json.'}
+    429 { Stop-Skript 2 'Too many requests (HTTP 429). Try again later.'}
+    default { Stop-Skript 2 "Error loading inventory: (HTTP $status)" }
     }
 }
 
 if (-not $inv -or $inv.success -ne 1) {
-    Stop-Skript 2 'Steam hat keine gültigen Inventardaten geliefert.'
+    Stop-Skript 2 'Steam has not delivered valid inventory data.'
 }
 if ($inv.more.items) {
-    Write-Log 'Inventar hat mehr als 500 Items, es werden nur die ersten 500 ausgewertet.' 'WARN'
+    Write-Log 'Inventory has more than 500 items, only the first 500 will be evaluated.' 'WARN'
 }
 
 # Schritt 4: Handelbare Skins zusammenfassen
@@ -114,9 +114,15 @@ foreach ($d in $inv.descriptions) {
     $beschreibung["$($d.classid):$($d.instanceid)"] = $d
 }
 
+$icons = @{}
+
+
 $namen = foreach ($a in $inv.assets) {
     $d = $beschreibung["$($a.classid):$($a.instanceid)"]
     if ($d -and (-not $config.steam.nurHandelbare -or $d.marketable -eq 1)) {
+        if (-not $icons.ContainsKey($d.market_hash_name)) {
+            $icons[$d.market_hash_name] = $d.icon_url
+        }
         $d.market_hash_name
     }
 }
@@ -129,11 +135,11 @@ $skins =$namen | Group-Object | Sort-Object Count -Descending | ForEach-Object {
 }
 
 if (-not $skins) {
-    Write-Log 'Keine handelbaren Skins im Inventar gefunden.' 'WARN'
+    Write-Log 'No tradeable skins found in inventory.' 'WARN'
     exit 0
 }
 
-Write-Log ("Inventar geladen: {0} Items, {1} verschiedene handelbare Skins" -f `
+Write-Log ("Inventory loaded: {0} Items, {1} different tradeable skins" -f `
     $inv.total_inventory_count, @($skins).Count)
 
 # Schritt 5: Hilfsfunktionen für Preisabfrage
@@ -210,7 +216,7 @@ $ergebnisse = @()
 $fehlerInFolge = 0
 $i = 0
 
-Write-Log ("Checking prices for {0} Skins at (ca. {1} Minute) ..." -f $total, [math]::Ceiling($total * $pause / 60))
+Write-Log ("Checking prices for {0} Skins (ca. {1} Minute) ..." -f $total, [math]::Ceiling($total * $pause / 60))
 
 foreach ($s in $skins) {
     $i++
@@ -243,7 +249,7 @@ foreach ($s in $skins) {
     }
 
     if ($fehlerInFolge -ge 5) {
-        Stop-Skript 3 '5 Preisabfragen in Folge fehlgeschlagen, Abbruch.'
+        Stop-Skript 3 '5 Price checking failed in a row, cancelled.'
     }
 
     $ergebnisse += [PSCustomObject]@{
@@ -261,10 +267,10 @@ Write-Progress -Activity 'Price checking complete' -Completed
 
 $mitPreis = @($ergebnisse | Where-Object { $null -ne $_.Preis })
 if ($mitPreis.Count -eq 0) {
-    Stop-Skript 3 'Fuer keinen einzigen Skin konnte ein Preis ermittelt werden.'
+    Stop-Skript 3 'not a single price for any skin were found.'
 }
 
-# Schritt 6b: Vergleich mit dem letzten bekannen Preis
+# Schritt 6b: Vergleich mit dem letzten bekannten Preis
 
 $csvPfad = Join-Path $PSScriptRoot $config.pfade.preisverlauf
 $letztePreise = @{}
@@ -280,7 +286,7 @@ if (Test-Path $csvPfad) {
     Write-Log ("Preisverlauf geladen: {0} Eingräge, {1} Skins mit früherem Preis" -f $verlauf.Count, $letztePreise.Count)
 }
 else {
-    Write-Log 'Noch kein Preisverlauf vorhandnen (erster Lauf).'
+    Write-Log 'no price history available (first run).'
 }
 
 foreach ($e in $ergebnisse) {
@@ -376,7 +382,7 @@ foreach ($datei in $alteBerichte) {
     }
 }
 if ($alteBerichte.Count -gt 0) {
-    Write-Log ("{0} alte Berichte ins Archiv verschoben." -f $alteBerichte.Count)
+    Write-Log ("old reports moved to archive." -f $alteBerichte.Count)
 }
 
 # Neuer Dateiname mit Datum und Uhrzeit des Laufs
@@ -384,15 +390,24 @@ if ($alteBerichte.Count -gt 0) {
 $zeitstempel = $zeitpunkt -replace ' ', '_' -replace ':', '-'
 $berichtPfad = Join-Path $berichtOrdner ("bericht_{0}.html" -f $zeitstempel)
 
+$bildBasis = "https://$($config.steam.bildServer)/economy/image/"  
+
 $zeilen = foreach ($e in ($ergebnisse | Sort-Object Wert -Descending)) {
     $diffText = ''
     $prozText = ''
     if ($null -ne $e.Differenz) { $diffText = '{0:+0.00;-0.00;0.00}' -f $e.Differenz }
     if ($null -ne $e.Prozent)   { $prozText = '{0:+0.0;-0.0;0.0} %'  -f $e.Prozent }
 
-    "<tr><td>{0}</td><td class='zahl'>{1}</td><td class='zahl'>{2:N2}</td><td class='{3}'>{4}</td><td class='zahl {3}'>{5}</td><td class='zahl {3}'>{6}</td><td class='zahl'>{7:N2}</td></tr>" -f `
-        [System.Net.WebUtility]::HtmlEncode($e.Skin), $e.Anzahl, $e.Preis,
-        $e.Richtung, $pfeile[$e.Richtung], $diffText, $prozText, $e.Wert
+    $bildHtml = ''
+    if($icons.Containskey($e.Skin) -and $icons[$e.Skin]) {
+        $bildUrl = $bildBasis + $icons[$e.Skin] + '/96fx96f'
+        $bildHtml = "<img src='{0}' alt='{1}' loading='lazy' onerror='this.remove()'>" -f `
+        $bildUrl, [System.Net.WebUtility]::HtmlEncode($e.Skin)
+    }
+
+    "<tr><td><div class='skin'><span>{0}</span>{8}</div></td><td class='zahl'>{1}</td><td class='zahl'>{2:N2}</td><td class='{3}'>{4}</td><td class='zahl {3}'>{5}</td><td class='zahl {3}'>{6}</td><td class='zahl'>{7:N2}</td></tr>" -f `
+    [System.Net.WebUtility]::HtmlEncode($e.Skin), $e.Anzahl, $e.Preis,
+    $e.Richtung, $pfeile[$e.Richtung], $diffText, $prozText, $e.Wert, $bildHtml
 }
 
 $gesamtText = '{0:N2}' -f $gesamt
@@ -419,12 +434,16 @@ $html = @"
   .karte { background: #fff; border: 1px solid #e3e5e8; border-radius: 8px; padding: .9rem 1.2rem; min-width: 180px; }
   .karte b { display: block; font-size: 1.4rem; margin-top: .2rem; }
   table  { border-collapse: collapse; width: 100%; background: #fff; }
-  th, td { padding: .45rem .7rem; border-bottom: 1px solid #e3e5e8; text-align: left; }
+  th, td { padding: .45rem .7rem; border-bottom: 1px solid #e3e5e8; text-align: left; vertical-align: middle; }
   th     { background: #2b3440; color: #fff; }
+  tr:hover { background: #f0f3f6; }
   .zahl  { text-align: right; font-variant-numeric: tabular-nums; }
   .hoch  { color: #1a7f37; }
   .runter { color: #c62828; }
   .gleich, .neu { color: #888; }
+  .skin      { display: flex; align-items: center; gap: .75rem; }
+  .skin img  { width: 64px; height: auto; flex-shrink: 0;
+               background: #2b3440; border-radius: 6px; padding: 3px; }
 </style>
 </head>
 <body>
@@ -452,3 +471,6 @@ catch {
     Stop-Skript 4 "HTML-Bericht konnte nicht gespeichert werden: $($_.Exception.Message)"
 }
 Write-Log "HTML-Bericht erstellt: $berichtPfad"
+
+Write-Log 'Skript successfully completed'
+exit 0
