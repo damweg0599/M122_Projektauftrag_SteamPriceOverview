@@ -1,7 +1,18 @@
-﻿<# CS2-Skin-Preisübersicht
-   Liest das Steam Inventar aus und ermittelt die aktuellen Preise
-   
-Ablauf:
+﻿<#
+    CS2-Skin-Preisübersicht
+
+    Zweck:
+    Liest die handelbaren CS2-Skins aus dem eigenen Steam-Inventar aus, ermittelt
+    die aktuellen Preise in CHF über den Steam Community Market, vergleicht sie
+    mit dem letzten Lauf und erstellt daraus einen HTML-Bericht.
+
+    Autor:  Dustin Amweg, Modul M122, Technische Berufsschule Zürich
+    Stand:  11.11.2026
+
+    Parameter:
+    -ConfigPfad   Pfad zur Konfigurationsdatei (Standard: config.json im Skriptordner)
+
+    Ablauf:
     Schritt 1   Logging vorbereiten
     Schritt 2   Config lesen und prüfen
     Schritt 3   Inventar über die Steam-Inventar-API laden
@@ -13,31 +24,39 @@ Ablauf:
     Schritt 8   Übersicht in der Konsole ausgeben
     Schritt 9   HTML-Bericht erstellen und alte Berichte archivieren
 
-    -ConfigPfad   Pfad zur Konfigurationsdatei (Standard: config.json im Skriptordner)
+    Exit-Codes:
+    0 - OK
+    1 - Fehler in der Config
+    2 - Fehler beim Laden des Inventars
+    3 - Fehler bei der Preisabfrage
+    4 - Fehler beim Speichern des HTML-Berichts
+#>
 
-   Exit Codes:
-   0 - OK
-   1 - Fehler in der Conifg
-   2 - Fehler beim Laden des Inventars
-   3 - Fehler bei der Preisabfrage
-   #>
 
+# Parameter für Tests (siehe Kopfkommentar)
    param(
     [string]$ConfigPfad = (Join-Path $PSScriptRoot 'config.json'),
     [int]$TestAnzahl = 0
    )
 
+
+# Jeder Fehler hält das Skript an, damit es nicht still scheitert
    $ErrorActionPreference = "Stop"
 
 
-# Schritt 1: Logging
+<# Schritt 1: Logging
+Legt die Logdatei an und stellt Funktionen zum Protokollieren
+und zum kontrollierten Abbruch mit Exit-Code bereit.#> 
 
+# Log-Ordner neben dem Skript anlegen, falls er fehlt; pro Tag eine eigene Logdatei
 $logOrdner = Join-Path $PSScriptRoot 'logs'
 if (-not (Test-Path $logOrdner)) {
     New-Item -ItemType Directory -Path $logOrdner | Out-Null
 }
 $logDatei = Join-Path $logOrdner ("{0}.log" -f (Get-Date -Format 'yyyy-MM-dd'))
 
+# Write-Log: schreibt eine Zeile mit Zeitstempel und Stufe (INFO, WARN, FEHLER)
+# in die Logdatei und gibt sie farbig in der Konsole aus
 function Write-Log {
     param(
         [string]$Text,
@@ -54,6 +73,7 @@ function Write-Log {
     }
 }
 
+# Stop-Skript: protokolliert einen Fehler und beendet das Skript mit dem angegebenen Exit-Code
 function Stop-Skript {
     param(
         [int]$Code,
@@ -66,14 +86,22 @@ function Stop-Skript {
 
 Write-Log 'Script started'
 
-# Schritt 2: Config lesen und prüfen
+<# Schritt 2: Config lesen und prüfen
 
+Liest config.json ein und prüft die wichtigsten Werte.
+
+Fehler in diesem Schritt beenden das Skript mit Exit-Code 1.#>
+
+# Pfad zur Konfigurationsdatei im Skriptordner
+# Hinweis: Diese Zeile überschreibt den Parameter -ConfigPfad
 $configPfad = Join-Path $PSScriptRoot 'config.json'
 
+# Abbruch, wenn die Datei fehlt
 if (-not (Test-Path $configPfad)) {
     Stop-Skript 1 "Config-File not found: $configPfad"
 }
 
+# Datei einlesen und von JSON in ein Objekt umwandeln; ungültiges JSON führt zum Abbruch
 try {
     $config = Get-Content $configPfad -Raw -Encoding UTF8 | ConvertFrom-Json 
 }
@@ -81,22 +109,31 @@ catch {
     Stop-Skript 1 "Config.json is not a valid JSON file: $($_.Exception.Message)"
 }
 
+# SteamID64 prüfen: genau 17 Ziffern, beginnt mit 7656
 if ("$($config.steam.steamId64)" -notmatch '^7656\d{13}$') {
     Stop-Skript 1 "Invalid SteamID64 in Config.json: $($config.steam.steamId64)"
 }
+# Pause zwischen den Preisabfragen muss mindestens 1 Sekunde betragen
 if ([int]$config.abfrage.pauseSekunden -lt 1) {
     Stop-Skript 1 'pauseSekunden in Config.json must be at least 1'
 }
 
 Write-Log "Config loaded (SteamID64: $($config.steam.steamId64))"
 
-#Schritt 3 Inventar laden
+<# Schritt 3: Inventar laden
 
+Fragt das CS2-Inventar über die Steam-Inventar-API ab.
+
+# Fehler in diesem Schritt beenden das Skript mit Exit-Code 2.
+
+# URL der Steam-Inventar-API mit SteamID64 und App-ID (730 = CS2) zusammensetzen #>
 $url = "https://steamcommunity.com/inventory/{0}/{1}/2?l=german&count=500" -f `
     $config.steam.steamId64, $config.steam.appId
 
 Write-Log 'Loading Steam Inventory...'
 
+# Inventar abfragen; bei einem Fehler wird der HTTP-Statuscode ausgewertet:
+# 403 = Inventar privat, 404 = nicht gefunden, 429 = zu viele Anfragen, sonst allgemeiner Fehler
 try {
     $inv = Invoke-RestMethod -Uri $url -TimeoutSec 30
 }
@@ -114,23 +151,31 @@ Switch ($status) {
     }
 }
 
+# Prüfen, ob Steam gültige Inventardaten geliefert hat
 if (-not $inv -or $inv.success -ne 1) {
     Stop-Skript 2 'Steam has not delivered valid inventory data.'
 }
+# Warnung, wenn das Inventar mehr Items hat, als abgefragt wurden
 if ($inv.more.items) {
     Write-Log 'Inventory has more than 500 items, only the first 500 will be evaluated.' 'WARN'
 }
 
-# Schritt 4: Handelbare Skins zusammenfassen
+<# Schritt 4: Handelbare Skins zusammenfassen
 
+Ordnet jedem Item seine Beschreibung zu, behält nur handelbare Skins und zählt gleiche Skins zusammen.#>
+
+# Nachschlagetabelle: classid:instanceid -> Beschreibung des Items (Name, handelbar, Bild)
 $beschreibung = @{}
 foreach ($d in $inv.descriptions) {
     $beschreibung["$($d.classid):$($d.instanceid)"] = $d
 }
 
+# Bild-Kennung je Skin für den HTML-Bericht
 $icons = @{}
 
 
+# Jedes Item seiner Beschreibung zuordnen, nur handelbare Items behalten
+# und die Bild-Kennung einmal pro Skin merken
 $namen = foreach ($a in $inv.assets) {
     $d = $beschreibung["$($a.classid):$($a.instanceid)"]
     if ($d -and (-not $config.steam.nurHandelbare -or $d.marketable -eq 1)) {
@@ -141,6 +186,7 @@ $namen = foreach ($a in $inv.assets) {
     }
 }
 
+# Gleiche Skins zusammenfassen und zählen, nach Anzahl absteigend sortieren
 $skins =$namen | Group-Object | Sort-Object Count -Descending | ForEach-Object {
     [PSCustomObject]@{
         Skin = $_.Name
@@ -148,6 +194,7 @@ $skins =$namen | Group-Object | Sort-Object Count -Descending | ForEach-Object {
     }
 }
 
+# Keine handelbaren Skins sind kein Fehler: Warnung und Exit-Code 0
 if (-not $skins) {
     Write-Log 'No tradeable skins found in inventory.' 'WARN'
     exit 0
@@ -156,12 +203,19 @@ if (-not $skins) {
 Write-Log ("Inventory loaded: {0} Items, {1} different tradeable skins" -f `
     $inv.total_inventory_count, @($skins).Count)
 
-# Schritt 5: Hilfsfunktionen für Preisabfrage
 
+<# Schritt 5: Hilfsfunktionen für die Preisabfrage
+
+Einstellungen für die Abfrage sowie Funktionen zum Umwandelndes Preistextes und zum Abfragen eines Preises. #>
+
+# Pause und Anzahl Versuche aus der Config übernehmen (mindestens 1 Versuch)
 $pause = [int]$config.abfrage.pauseSekunden
 $maxVersuche = [int]$config.abfrage.maxVersuche
 if ($maxVersuche -lt 1) { $maxVersuche = 1}
 
+<#ConvertTo-Preis: wandelt den Preistext von Steam (z. B. «CHF 1'234.50») in eine Zahl um.
+
+Komma und Punkt werden als Tausender, Dezimaltrennzeichen erkannt. Ist keine Umwandlung möglich, wird $null zurückgegeben. #>
 function ConvertTo-Preis {
     param([string]$Text)
 
@@ -182,6 +236,12 @@ function ConvertTo-Preis {
     return $null
 }
 
+<# Get-Preis: fragt den aktuellen Preis eines Skins über die Steam-Market-API ab. 
+
+Bei HTTP 429 wird 60 Sekunden gewartet, bei anderen Fehlern die normale Pause,
+danach folgt ein neuer Versuch, bis maxVersuche erreicht ist.
+
+Rückgabe: Status OK (mit Antwort), KEIN_PREIS oder FEHLER #>
 function Get-Preis {
     param([string]$Name)
 
@@ -215,15 +275,20 @@ function Get-Preis {
     return @{ Status = 'FEHLER'; Antwort = $null }
 }
 
-# Schritt 6: Preise für alle Skins abfragen
+<# Schritt 6: Preise für alle Skins abfragen
 
+Fragt für jeden Skin den aktuellen Preis ab und berechnet den Wert. Zu viele Fehler beenden das Skript mit Exit-Code 3. #>
+
+# Sicherstellen, dass $skins immer eine Liste ist (auch bei nur einem Skin)
 $skins = @($skins)
 
+# Testmodus: nur die ersten n Skins abfragen (Parameter -TestAnzahl)
 if ($TestAnzahl -gt 0) {
     $skins = @($skins | Select-Object -First $TestAnzahl)
     Write-Log "Testmodus: Es werden nur $TestAnzahl Skins abgefragt." 'WARN'
 }
 
+# Zähler und gemeinsamer Zeitstempel für alle Preise dieses Laufs
 $total = $skins.Count
 $zeitpunkt = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 $ergebnisse = @()
@@ -232,6 +297,7 @@ $i = 0
 
 Write-Log ("Checking prices for {0} Skins (ca. {1} Minute) ..." -f $total, [math]::Ceiling($total * $pause / 60))
 
+# Für jeden Skin: Fortschritt anzeigen, Preis abfragen und Ergebnis auswerten
 foreach ($s in $skins) {
     $i++
     Write-Progress -Activity 'Checking price' `
@@ -241,6 +307,8 @@ foreach ($s in $skins) {
     $r = Get-Preis -Name $s.Skin
     $preis = $null
 
+    # Status auswerten: bei OK zuerst Tiefstpreis, sonst Medianpreis verwenden;
+    # nur echte Abfragefehler erhöhen den Zähler für Fehler in Folge
     switch ($r.Status) {
         'OK' {
             $preis = ConvertTo-Preis $r.Antwort.lowest_price
@@ -262,10 +330,12 @@ foreach ($s in $skins) {
         }
     }
 
+    # Nach 5 fehlgeschlagenen Skins in Folge abbrechen
     if ($fehlerInFolge -ge 5) {
         Stop-Skript 3 '5 Price checking failed in a row, cancelled.'
     }
 
+    # Ergebnis speichern; Wert = Preis x Anzahl
     $ergebnisse += [PSCustomObject]@{
         Zeitpunkt = $zeitpunkt
         Skin = $s.Skin
@@ -274,18 +344,24 @@ foreach ($s in $skins) {
         Wert = if ($null -ne $preis) { $preis * $s.Anzahl } else { $null }
     }
 
+    # Pause zwischen den Abfragen, nach dem letzten Skin nicht mehr
     if ($i -lt $total) { Start-Sleep -Seconds $pause }
 }
 
 Write-Progress -Activity 'Price checking complete' -Completed
 
+# Abbruch, wenn für keinen einzigen Skin ein Preis ermittelt werden konnte
 $mitPreis = @($ergebnisse | Where-Object { $null -ne $_.Preis })
 if ($mitPreis.Count -eq 0) {
     Stop-Skript 3 'not a single price for any skin were found.'
 }
 
 # Schritt 6b: Vergleich mit dem letzten bekannten Preis
+# Lädt den Preisverlauf und berechnet für jeden Skin die Veränderung
+# in CHF und Prozent seit dem letzten Lauf.
 
+# Letzten bekannten Preis je Skin aus preisverlauf.csv laden
+# (muss vor dem Speichern der neuen Preise geschehen)
 $csvPfad = Join-Path $PSScriptRoot $config.pfade.preisverlauf
 $letztePreise = @{}
 
@@ -303,6 +379,8 @@ else {
     Write-Log 'no price history available (first run).'
 }
 
+# Für jeden Skin Differenz in CHF und Prozent zum letzten Preis sowie die Richtung
+# (hoch, runter, gleich, neu) berechnen und dem Ergebnis hinzufügen
 foreach ($e in $ergebnisse) {
     $alterPreis = $null
     $differenz = $null
@@ -327,6 +405,7 @@ foreach ($e in $ergebnisse) {
     $e | Add-Member -NotePropertyName 'Richtung' -NotePropertyValue $richtung
 }
 
+# Symbole für die Trendanzeige: Pfeil nach oben, Pfeil nach unten, gleich, kein Vergleich
 $pfeile = @{
     hoch = [string][char]0x25b2
     runter = [string][char]0x25bc
@@ -336,13 +415,16 @@ $pfeile = @{
 
 
 # Schritt 7: Preisverlauf speichern
+# Hängt die neuen Preise mit Zeitstempel an preisverlauf.csv an.
 
+# Ordner für den Preisverlauf anlegen, falls er fehlt
 $csvPfad = Join-Path $PSScriptRoot $config.pfade.preisverlauf
 $csvOrdner = Split-Path $csvPfad -Parent
 if (-not (Test-Path $csvOrdner)) {
     New-Item -ItemType Directory -Path $csvOrdner | Out-Null
 }
 
+# Neue Preise mit Zeitstempel an die CSV-Datei anhängen (Preis mit Punkt als Dezimalzeichen)
 $ergebnisse |
  Select-Object Zeitpunkt, Skin, Anzahl,
  @{ n = 'Preis'; e = { if ($null -ne $_.Preis) { $_.Preis.ToString('0.00', [cultureInfo]::InvariantCulture) } else { '' } } } |
@@ -350,16 +432,21 @@ $ergebnisse |
 
  Write-Log "Preise gespeichert in $csvPfad"
 
- # Schritt 8: Übersicht ausgeben
+# Schritt 8: Übersicht ausgeben
+# Zeigt die Preise mit Trend in der Konsole und schreibt
+# Gesamtwert und Veränderung ins Log.
 
+# Gesamtwert aller Skins mit Preis berechnen
 $gesamt = ($mitPreis | Measure-Object -Property Wert -Sum).Sum
 
+# Wertänderung seit dem letzten Lauf: Summe aus Differenz x Anzahl
 $mitVergleich = @($ergebnisse | Where-Object { $null -ne $_.Differenz })
 $wertAenderung = $null
 if ($mitVergleich.Count -gt 0) {
     $wertAenderung = ($mitVergleich | Foreach-Object { $_.Differenz * $_.Anzahl } | Measure-Object -Sum).Sum
 }
 
+# Übersichtstabelle in der Konsole, sortiert nach Wert
 $ergebnisse | Sort-Object Wert -Descending | Format-Table `
 Skins,
 Anzahl,
@@ -369,13 +456,17 @@ Anzahl,
 @{ n = '%'; e = { if ($null -ne $_.Prozent) { '{0:+0.00;-0.00;0.00}' -f $_.Prozent } }; a = 'right' },
 @{ n = 'Wert CHF'; e = { '{0:N2}' -f $_.Wert }; a = 'right' }
 
+# Gesamtwert und Veränderung ins Log schreiben
 Write-Log ("Gesamtwert Inventar: CHF {0:N2} ({1} von {2} Skins mit Preis)" -f $gesamt, $mitPreis.Count, $total)
 if ($null -ne $wertAenderung) {
     Write-Log ("Veränderung seit letztem Lauf: CHF {0:+0.00;-0.00;0.00}" -f $wertAenderung)
 }
 
 # Schritt 9: HTML-Bericht
+# Archiviert alte Berichte und erstellt einen neuen HTML-Bericht
+# mit Bildern. Ein Fehler beim Speichern führt zu Exit-Code 4.
 
+# Ordner für Berichte und Archiv anlegen, falls sie fehlen
 $berichtOrdner  = Join-Path $PSScriptRoot $config.pfade.berichte
 $archivOrdner = Join-Path $PSScriptRoot $config.pfade.archiv
 foreach ($ordner in $berichtOrdner, $archivOrdner) {
@@ -384,7 +475,7 @@ foreach ($ordner in $berichtOrdner, $archivOrdner) {
     }
 }
 
-# Alte Bericht ins Archiv verschieben
+# Alte Berichte ins Archiv verschieben; ein Fehler dabei führt nur zu einer Warnung
 
 $alteBerichte = @(Get-ChildItem -Path $berichtOrdner -Filter 'bericht*.html' -File)
 foreach ($datei in $alteBerichte) {
@@ -399,13 +490,16 @@ if ($alteBerichte.Count -gt 0) {
     Write-Log ("old reports moved to archive." -f $alteBerichte.Count)
 }
 
-# Neuer Dateiname mit Datum und Uhrzeit des Laufs
+# Neuer Dateiname mit Datum und Uhrzeit des Laufs (Doppelpunkt ist in Dateinamen nicht erlaubt)
 
 $zeitstempel = $zeitpunkt -replace ' ', '_' -replace ':', '-'
 $berichtPfad = Join-Path $berichtOrdner ("bericht_{0}.html" -f $zeitstempel)
 
+# Basisadresse des Steam-Bildservers aus der Config
 $bildBasis = "https://$($config.steam.bildServer)/economy/image/"  
 
+# Für jeden Skin eine Tabellenzeile erzeugen: Name mit Bild, Anzahl, Preis, Trend,
+# Differenz, Prozent und Wert; Skinnamen werden für HTML codiert
 $zeilen = foreach ($e in ($ergebnisse | Sort-Object Wert -Descending)) {
     $diffText = ''
     $prozText = ''
@@ -424,6 +518,7 @@ $zeilen = foreach ($e in ($ergebnisse | Sort-Object Wert -Descending)) {
     $e.Richtung, $pfeile[$e.Richtung], $diffText, $prozText, $e.Wert, $bildHtml
 }
 
+# Werte für die Karten oben im Bericht (Gesamtwert und Veränderung)
 $gesamtText = '{0:N2}' -f $gesamt
 if ($null -ne $wertAenderung) {
     $aenderungText   = 'CHF {0:+0.00;-0.00;0.00}' -f $wertAenderung
@@ -434,6 +529,7 @@ else {
     $aenderungKlasse = 'neu'
 }
 
+# HTML-Seite mit Stil (CSS), Karten und Tabelle zusammensetzen
 $html = @"
 <!DOCTYPE html>
 <html lang="de">
@@ -478,6 +574,7 @@ $html = @"
 </html>
 "@
 
+# Bericht speichern; bei einem Fehler Abbruch mit Exit-Code 4
 try {
     $html | Set-Content -Path $berichtPfad -Encoding UTF8
 }
@@ -486,5 +583,6 @@ catch {
 }
 Write-Log "HTML-Bericht erstellt: $berichtPfad"
 
+# Erfolgreicher Abschluss
 Write-Log 'Skript successfully completed'
 exit 0
